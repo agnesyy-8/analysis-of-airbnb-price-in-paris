@@ -1,0 +1,149 @@
+---
+title: "Price Analysis of Airbnb in Paris"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+| [**1. INTRODUCTION**]{.ul}
+
+Visiting Paris is always a good idea. The city of light makes for a
+dreamy getaway, and its diverse culture always provide tourists a
+brand-new experience on each visit. However, when it comes to
+accommodation, Paris is a little pricey. Thanks to Airbnb, a new
+affordable options appeared since 2008. More and more people choose to
+stay in a local house when they are travelling. The prices of the houses
+vary a lot depending on the location, the size, the service or the
+surroundings of the houses.
+
+In this project, by working on the dataset of Airbnb in Paris, we
+studied, analyzed the data in order to conduct a simple descriptive
+analysis. Focusing on the price of the rental, we tried to find the
+mechanics of price determination.
+
+The open sources of Airbnb in Paris:<http://insideairbnb.com/paris/#>
+
+```{r}
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(viridis)
+library(plotly)
+library(gganimate)
+library(ggrepel)
+library(cowplot)
+library(gifski)
+library(png)
+library(hrbrthemes)
+```
+
+| [**2. OVERVIEW OF DATA SET**]{.ul}
+
+First, let's take a look on the variables that we got in the data set
+listing: 
+
+```{r}
+setwd("~/Documents/R/Assignment 1 ")
+paris_airbnb <- read_csv("~/Documents/R/Assignment 1 /paris_airbnb_listing.csv")
+```
+
+The data set contains 18 variables and 49255 observations. Each row is
+the descriptions of a Airbnb rental by different modality such as: room
+type, price, availability, etc, including also the names and the id of
+hosts. By observing quickly, we can see that there are some variables
+which contains missing values. For having a easier processing of data
+set, we would like to convert two columns that are character type to
+categorical type: "neighbourhood" and "room_type".
+
+```{r}
+paris_airbnb$room_type <- as.factor(paris_airbnb$room_type)
+paris_airbnb$neighbourhood <- as.factor(paris_airbnb$neighbourhood)
+```
+
+| [**3. EARLY DATA EXPLORATION**]{.ul}
+
+| **3.1 Data selection In order to effectively analyse the mechanism of the price, we have to know if there is any missing values or outliers in the data.**
+
+```{r}
+paris_airbnb <- select(paris_airbnb, -id, -name, -neighbourhood_group, -last_review, -license, -calculated_host_listings_count, reviews_per_month) #Remove columns
+```
+
+The syntax "is.na()" is applied to check if any columns contains NAN
+values. The result shown that there is a column with full of missing
+values (neighbourhood_group), and since we had already the variable
+called "neighbourhood" which contains the information that we need, we
+decided to do not take into account the variable "neighbourhood_group".
+Also, there are some variables that don't pose any influence on the
+rental price such as "id", "name", "last review", "licence",
+"calculated_host_listings_count" and "reviews_per_month".
+
+| **3.2 Missing values**
+
+In the dataset, some of fields in different variables contains missing
+values. As we couldn't delete the whole variables, it might deviate the
+result. Therefore, "na.omit()" is used to remove all the missing values.
+
+```{r}
+paris_airbnb <- paris_airbnb %>% na.omit()  #Remove the NaN values from the dataset
+```
+
+| **3.3 Outlier studies**
+
+In this section, we would like to know if there are any extreme values
+in the data set. For a better visualization, the box plots is applied.
+
+In the price's box plot, the maximum values was 9000 euros while
+the minimum is 0. Since it is not possible to rent the apartment in 0 and to avoid the large deviation of the mean value of price per
+night, we decide to keep the price is larger than 0 euro and less than 3000 euros.
+
+```{r}
+paris_airbnb %>%
+  ggplot(aes(x= room_type , y = price, fill = room_type)) + geom_boxplot() +
+  ylim(1, 3000) +
+  ggtitle("The price per night of different type of room") + xlab("The type of room") 
+```
+```{r}
+paris_airbnb <- filter(paris_airbnb, price <=3000, price >=1)
+```
+
+In the minimum night box plot, the value of 10_000 minimum night is a
+potentially outliners as it would not happen in reality. Because of that
+reason, we decided to keep only the rentals which the requirement of minimum nights
+are less than or equal to 2 years (700 days).
+
+```{r}
+paris_airbnb %>%
+  ggplot(aes(x= room_type , y = minimum_nights, fill = room_type)) + geom_boxplot() +
+  ylim(1, 700) +
+  ggtitle("The minimun nights stayed in different type of room")
+```
+```{r}
+paris_airbnb <- filter(paris_airbnb, minimum_nights <=700, minimum_nights >=1)
+```
+
+| **3.4 The price distribution by district**
+
+As we can see the observations are spread all over the city,the neighborhoods like (Élysée,Buttes-Montmartare) are the most expensive places to rent a room or home.Not surprisingly, the location of our apartments poses a major influence on the price.
+
+```{r}
+paris_airbnb %>%
+  ggplot(aes(x = price, y = neighbourhood, fill = room_type)) + 
+  geom_col(position = position_dodge(0.7)) + 
+  theme(legend.position = "top") +
+  ylab("district")
+```
+
+| [**4. Save the data set**]{.ul}
+
+```{r}
+save(paris_airbnb, file = "paris_airbnb_analysis.RData")
+```
+
+
